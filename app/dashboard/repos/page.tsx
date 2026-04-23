@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { fetchUserRepositories } from "@/app/actions"; // Importamos la acción
+import { useState, useEffect, useTransition } from "react";
+import { fetchUserRepositories, saveSelectedRepos } from "@/app/actions";
+import { useRouter } from "next/navigation";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import SyncIcon from "@mui/icons-material/Sync";
@@ -10,13 +11,13 @@ import CheckIcon from "@mui/icons-material/Check";
 export default function RepositoriesPage() {
   const [repos, setRepos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
-  // Función para cargar los datos reales
   const loadRepos = async () => {
     setIsLoading(true);
     try {
       const realRepos = await fetchUserRepositories();
-      // Transformamos los datos de GraphQL a la estructura de nuestra UI
       const formattedRepos = realRepos.map((r: any, index: number) => ({
         id: index,
         name: r.name,
@@ -25,7 +26,7 @@ export default function RepositoriesPage() {
         langColor: r.primaryLanguage?.color || "#888",
         stars: r.stargazerCount,
         url: r.url,
-        selected: false, // Por defecto no están en el portafolio hasta que el usuario los seleccione
+        selected: false,
       }));
       setRepos(formattedRepos);
     } catch (error) {
@@ -35,7 +36,6 @@ export default function RepositoriesPage() {
     }
   };
 
-  // Cargar automáticamente al entrar a la página
   useEffect(() => {
     loadRepos();
   }, []);
@@ -46,6 +46,28 @@ export default function RepositoriesPage() {
     );
   };
 
+  // NUEVA FUNCIÓN: Maneja el guardado en la base de datos
+  const handleSaveSelection = () => {
+    const selected = repos.filter(r => r.selected);
+    if (selected.length === 0) {
+      alert("Please select at least one repository to feature.");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await saveSelectedRepos(selected);
+        if (result.success) {
+          // Redirigir a la vista pública del portafolio del usuario
+          router.push(`/${result.username}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Failed to save selection. Please try again.");
+      }
+    });
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
@@ -53,10 +75,9 @@ export default function RepositoriesPage() {
           <h1 className="text-2xl font-bold font-sans">Overview</h1>
         </div>
         <div className="flex gap-3">
-          {/* Botón de sincronización manual conectado a la función */}
           <button
             onClick={loadRepos}
-            disabled={isLoading}
+            disabled={isLoading || isPending}
             className="flex items-center gap-2 px-4 py-2 border border-border bg-card hover:bg-muted text-sm font-bold uppercase tracking-wider text-muted-foreground transition-colors rounded-md disabled:opacity-50"
           >
             <SyncIcon
@@ -65,13 +86,18 @@ export default function RepositoriesPage() {
             />
             {isLoading ? "Syncing..." : "Sync GitHub"}
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors rounded-md">
-            Save Selection
+          
+          {/* BOTÓN ACTUALIZADO PARA GUARDAR */}
+          <button 
+            onClick={handleSaveSelection}
+            disabled={isPending || isLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors rounded-md disabled:opacity-50"
+          >
+            {isPending ? "Saving..." : "Save Selection"}
           </button>
         </div>
       </div>
 
-      {/* Grid de Repositorios Reales */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {isLoading ? (
           <div className="col-span-full py-20 text-center text-muted-foreground font-mono text-sm animate-pulse">

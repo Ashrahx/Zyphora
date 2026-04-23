@@ -37,6 +37,8 @@ export async function signInWithGithub() {
     provider: "github",
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+      // ESTA ES LA LÍNEA QUE FALTA: Pedimos acceso al perfil, email y repos públicos
+      scopes: 'read:user user:email public_repo' 
     },
   });
 
@@ -106,6 +108,54 @@ export async function saveProfileConfig(profileData: any) {
   if (error) {
     console.error("Error guardando en BD:", error.message);
     throw error;
+  }
+
+  return { success: true };
+}
+
+// NUEVA FUNCIÓN AÑADIDA: Guarda la selección de repositorios
+export async function saveSelectedRepos(selectedRepos: any[]) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Acceso denegado.");
+
+  // Obtenemos el username de GitHub para usarlo en la URL pública
+  const username = user.user_metadata.preferred_username;
+
+  const { error } = await supabase.from("portfolios").upsert({
+    user_id: user.id,
+    github_username: username, // Usaremos esto para la ruta pública
+    display_name: user.user_metadata.full_name || username,
+    selected_repos: selectedRepos,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id' }); // onConflict asegura que si el usuario ya tiene un registro, se actualice en lugar de crear uno nuevo
+
+  if (error) {
+    console.error("Error guardando repositorios:", error.message);
+    throw new Error("No se pudo guardar la selección.");
+  }
+
+  return { success: true, username };
+}
+
+export async function saveTemplateSelection(templateId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Acceso denegado.");
+
+  const { error } = await supabase
+    .from("portfolios")
+    .update({ 
+      template_id: templateId,
+      updated_at: new Date().toISOString() 
+    })
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error("Error guardando el template:", error.message);
+    throw new Error("No se pudo guardar la plantilla.");
   }
 
   return { success: true };

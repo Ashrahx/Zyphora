@@ -10,7 +10,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans">
       <nav className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container max-w-[1200px] h-16 flex items-center justify-between">
+        <div className="container max-w-300 h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <span className="text-primary font-mono font-bold text-xl tracking-tighter">
               Zyphora
@@ -41,7 +41,7 @@ export default function LandingPage() {
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center text-center px-6 pt-20 pb-32 relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/10 blur-[120px] rounded-full -z-10" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-150 h-75 bg-primary/10 blur-[120px] rounded-full -z-10" />
 
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/20 bg-primary/5 text-primary font-mono text-[10px] mb-8">
           <span className="relative flex h-2 w-2">

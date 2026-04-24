@@ -38,12 +38,14 @@ export default function RootLayout({
         "font-sans",
       )}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body 
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange={false}
+          disableTransitionOnChange={true}
         >
           {children}
         </ThemeProvider>

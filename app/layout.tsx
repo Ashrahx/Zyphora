@@ -43,7 +43,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className="h-screen flex flex-col bg-background text-foreground overflow-hidden"
       >
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-center" richColors />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

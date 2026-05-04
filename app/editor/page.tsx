@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useTransition } from "react";
+import { toast } from "sonner";
 import {
   getCurrentUserPortfolio,
   updatePortfolioDetails,
@@ -16,6 +17,7 @@ import {
   CVData,
   Profile,
 } from "@/lib/types";
+import { t, Lang } from "@/lib/i18n";
 import { Iphone } from "@/components/ui/iphone";
 import { Badge } from "@/components/ui/badge";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
@@ -32,6 +34,12 @@ import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import CircularProgress from "@mui/material/CircularProgress";
+import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import RocketLaunchOutlinedIcon from "@mui/icons-material/RocketLaunchOutlined";
+import StarIcon from "@mui/icons-material/Star";
+import AllInclusiveIcon from "@mui/icons-material/AllInclusive";
+import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 
 import { ReactDark } from "@/components/ui/svgs/reactDark";
 import { Python } from "@/components/ui/svgs/python";
@@ -107,10 +115,14 @@ export default function PreviewPage() {
   );
   const [templateId, setTemplateId] = useState<string>("minimal");
   const [expandedJobs, setExpandedJobs] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<"profile" | "repos" | "import">(
-    "profile",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "profile" | "repos" | "import" | "deploys"
+  >("profile");
   const [panelOpen, setPanelOpen] = useState(false);
+  const [lang, setLang] = useState<Lang>("es");
+  const [deployHistory, setDeployHistory] = useState<
+    Array<{ template_id: string; deployed_at: string }>
+  >([]);
 
   const toggleJobExpanded = (jobIndex: number) => {
     setExpandedJobs((prev) => ({
@@ -137,6 +149,7 @@ export default function PreviewPage() {
   useEffect(() => {
     const loadData = async () => {
       const data = await getCurrentUserPortfolio();
+
       if (data) {
         const actualUsername = data.github_username || "identicons/pedro";
         setUsername(actualUsername);
@@ -146,6 +159,20 @@ export default function PreviewPage() {
           education: (data.education || []) as Education[],
           skills: data.skills || [],
         });
+
+        if (data.template_id) {
+          setTemplateId(data.template_id);
+        }
+
+        if (data.deploy_history) {
+          setDeployHistory(
+            data.deploy_history as Array<{
+              template_id: string;
+              deployed_at: string;
+            }>,
+          );
+        }
+
         setProfile((prev) => ({
           name: data.display_name || prev.name,
           headline: data.headline || prev.headline,
@@ -155,8 +182,29 @@ export default function PreviewPage() {
           location: data.location || prev.location,
         }));
       }
+
+      const savedTemplate = localStorage.getItem("selectedTemplate");
+      if (
+        savedTemplate &&
+        ["minimal", "modern", "professional", "creative"].includes(
+          savedTemplate,
+        )
+      ) {
+        setTemplateId(savedTemplate);
+        localStorage.removeItem("selectedTemplate");
+        toast.success(`Plantilla ${savedTemplate} aplicada`, {
+          position: "top-center",
+        });
+
+        try {
+          await updatePortfolioDetails(profile, savedTemplate);
+        } catch (error) {
+          console.error("Error guardando template:", error);
+        }
+      }
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,10 +224,14 @@ export default function PreviewPage() {
             file.type,
           );
           await updatePortfolioFromCV(extractedData);
-          alert("¡Currículum procesado con magia de IA exitosamente!");
+          toast.success("¡Currículum procesado con magia de IA exitosamente!", {
+            position: "top-center",
+          });
           window.location.reload();
         } catch (error) {
-          alert("Error procesando el CV. Revisa la consola.");
+          toast.error("Error procesando el CV. Revisa la consola.", {
+            position: "top-center",
+          });
           console.error(error);
         } finally {
           setIsExtracting(false);
@@ -285,11 +337,11 @@ export default function PreviewPage() {
           </div>
           ${profile.bio ? `<p class="text-base leading-relaxed">${profile.bio}</p>` : ""}
         </div>
-        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-2xl font-bold">Work Experience</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="border-l-4 pl-4 pb-4"><div class="flex justify-between items-start mb-1"><h3 class="font-bold">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm opacity-70">${job.company}</p>${job.description ? `<p class="text-sm mt-2 opacity-70">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
-        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-2xl font-bold">Education</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="border-l-4 pl-4"><h3 class="font-bold">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-sm opacity-60 mt-1">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-2xl font-bold">${t("workExperience", lang)}</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="border-l-4 pl-4 pb-4"><div class="flex justify-between items-start mb-1"><h3 class="font-bold">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm opacity-70">${job.company}</p>${job.description ? `<p class="text-sm mt-2 opacity-70">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-2xl font-bold">${t("education", lang)}</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="border-l-4 pl-4"><h3 class="font-bold">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-sm opacity-60 mt-1">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
         ${
           repos.length > 0
-            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-2xl font-bold">Projects</h2></div><div class="space-y-3">${repos
+            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-2xl font-bold">${t("featuredProjects", lang)}</h2></div><div class="space-y-3">${repos
                 .slice(0, 5)
                 .map(
                   (repo: Repository) =>
@@ -300,7 +352,7 @@ export default function PreviewPage() {
         }
         ${
           filteredSkills.length > 0
-            ? `<div><div class="flex items-center gap-2 mb-6"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-2xl font-bold">Skills</h2></div><div class="flex flex-wrap gap-2">${filteredSkills
+            ? `<div><div class="flex items-center gap-2 mb-6"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-2xl font-bold">${t("skills", lang)}</h2></div><div class="flex flex-wrap gap-2">${filteredSkills
                 .slice(0, 20)
                 .map(
                   (skill: string) =>
@@ -322,11 +374,11 @@ export default function PreviewPage() {
           </div>
           ${profile.bio ? `<p class="text-base leading-relaxed mt-6">${profile.bio}</p>` : ""}
         </div>
-        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">Experience</h2></div><div class="space-y-6">${cvData.work.map((job: WorkExperience) => `<div><div class="flex justify-between mb-1"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-2">${job.company}</p>${job.description ? `<p class="text-sm opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
-        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">Education</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div><h3 class="font-bold">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-1">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">${t("experience", lang)}</h2></div><div class="space-y-6">${cvData.work.map((job: WorkExperience) => `<div><div class="flex justify-between mb-1"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-2">${job.company}</p>${job.description ? `<p class="text-sm opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">${t("education", lang)}</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div><h3 class="font-bold">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-1">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
         ${
           repos.length > 0
-            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">Featured Projects</h2></div><div class="space-y-3">${repos
+            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-6"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">${t("featuredProjects", lang)}</h2></div><div class="space-y-3">${repos
                 .slice(0, 5)
                 .map(
                   (repo: Repository) =>
@@ -337,7 +389,7 @@ export default function PreviewPage() {
         }
         ${
           filteredSkills.length > 0
-            ? `<div><div class="flex items-center gap-2 mb-6"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">Core Competencies</h2></div><div class="grid grid-cols-3 gap-3">${filteredSkills
+            ? `<div><div class="flex items-center gap-2 mb-6"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-2xl font-bold border-b-2 pb-2 flex-1">${t("coreCompetencies", lang)}</h2></div><div class="grid grid-cols-3 gap-3">${filteredSkills
                 .slice(0, 9)
                 .map(
                   (skill: string) =>
@@ -364,11 +416,11 @@ export default function PreviewPage() {
             </div>
           </div>
         </div>
-        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-3xl font-bold">Work Experience</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="p-6 rounded-xl border border-opacity-20 backdrop-blur"><div class="flex justify-between mb-2"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-3">${job.company}</p>${job.description ? `<p class="text-sm opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
-        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-3xl font-bold">Education</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="p-6 rounded-xl border border-opacity-20 backdrop-blur"><h3 class="font-bold text-lg">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-2">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.work && cvData.work.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="briefcase" class="w-6 h-6"></i><h2 class="text-3xl font-bold">${t("workExperience", lang)}</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="p-6 rounded-xl border border-opacity-20 backdrop-blur"><div class="flex justify-between mb-2"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-sm opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-3">${job.company}</p>${job.description ? `<p class="text-sm opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></div>` : ""}
+        ${cvData.education && cvData.education.length > 0 ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="graduation-cap" class="w-6 h-6"></i><h2 class="text-3xl font-bold">${t("education", lang)}</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="p-6 rounded-xl border border-opacity-20 backdrop-blur"><h3 class="font-bold text-lg">${edu.degree}</h3><p class="text-sm opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-2">${edu.year}</p>` : ""}</div>`).join("")}</div></div>` : ""}
         ${
           repos.length > 0
-            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-3xl font-bold">Featured Projects</h2></div><div class="grid grid-cols-2 gap-6">${repos
+            ? `<div class="mb-16"><div class="flex items-center gap-2 mb-8"><i data-lucide="code" class="w-6 h-6"></i><h2 class="text-3xl font-bold">${t("featuredWork", lang)}</h2></div><div class="grid grid-cols-2 gap-6">${repos
                 .slice(0, 4)
                 .map(
                   (repo: Repository) =>
@@ -379,7 +431,7 @@ export default function PreviewPage() {
         }
         ${
           filteredSkills.length > 0
-            ? `<div><div class="flex items-center gap-2 mb-8"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-3xl font-bold">Skills</h2></div><div class="flex flex-wrap gap-3">${filteredSkills
+            ? `<div><div class="flex items-center gap-2 mb-8"><i data-lucide="zap" class="w-6 h-6"></i><h2 class="text-3xl font-bold">${t("skills", lang)}</h2></div><div class="flex flex-wrap gap-3">${filteredSkills
                 .slice(0, 15)
                 .map(
                   (skill: string) =>
@@ -405,15 +457,15 @@ export default function PreviewPage() {
           </div>
         </section>
         <div class="grid grid-cols-3 gap-4 mb-16">
-          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">${repos.length}</h3><p class="text-sm opacity-70">Projects</p></div>
-          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="zap" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">${filteredSkills.length}</h3><p class="text-sm opacity-70">Skills</p></div>
-          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="heart" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">∞</h3><p class="text-sm opacity-70">Passion</p></div>
+          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">${repos.length}</h3><p class="text-sm opacity-70">${t("projects", lang)}</p></div>
+          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="zap" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">${filteredSkills.length}</h3><p class="text-sm opacity-70">${t("skills", lang)}</p></div>
+          <div class="p-6 rounded-2xl border-2 text-center"><i data-lucide="heart" class="w-8 h-8 mx-auto mb-2"></i><h3 class="font-bold text-3xl mb-1">∞</h3><p class="text-sm opacity-70">${t("passion", lang)}</p></div>
         </div>
-        ${cvData.work && cvData.work.length > 0 ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="briefcase" class="w-7 h-7"></i><h2 class="text-3xl font-black">Experience</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="p-6 rounded-xl border-2 bg-opacity-5"><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-xs opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-2">${job.company}</p>${job.description ? `<p class="text-xs opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></section>` : ""}
-        ${cvData.education && cvData.education.length > 0 ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="graduation-cap" class="w-7 h-7"></i><h2 class="text-3xl font-black">Education</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="p-6 rounded-xl border-2 bg-opacity-5 text-center"><h3 class="font-bold text-lg mb-1">${edu.degree}</h3><p class="text-sm font-semibold opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-2">${edu.year}</p>` : ""}</div>`).join("")}</div></section>` : ""}
+        ${cvData.work && cvData.work.length > 0 ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="briefcase" class="w-7 h-7"></i><h2 class="text-3xl font-black">${t("experience", lang)}</h2></div><div class="space-y-4">${cvData.work.map((job: WorkExperience) => `<div class="p-6 rounded-xl border-2 bg-opacity-5"><div class="flex justify-between items-start mb-2"><h3 class="font-bold text-lg">${job.title || job.position}</h3>${job.duration ? `<span class="text-xs opacity-60">${job.duration}</span>` : ""}</div><p class="text-sm font-semibold opacity-70 mb-2">${job.company}</p>${job.description ? `<p class="text-xs opacity-70 leading-relaxed">${job.description}</p>` : ""}</div>`).join("")}</div></section>` : ""}
+        ${cvData.education && cvData.education.length > 0 ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="graduation-cap" class="w-7 h-7"></i><h2 class="text-3xl font-black">${t("education", lang)}</h2></div><div class="space-y-4">${cvData.education.map((edu: Education) => `<div class="p-6 rounded-xl border-2 bg-opacity-5 text-center"><h3 class="font-bold text-lg mb-1">${edu.degree}</h3><p class="text-sm font-semibold opacity-70">${edu.school || edu.institution}</p>${edu.year ? `<p class="text-xs opacity-60 mt-2">${edu.year}</p>` : ""}</div>`).join("")}</div></section>` : ""}
         ${
           repos.length > 0
-            ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="code" class="w-7 h-7"></i><h2 class="text-3xl font-black">Featured Work</h2></div><div class="grid grid-cols-2 gap-6">${repos
+            ? `<section class="mb-16"><div class="flex justify-center gap-2 mb-8"><i data-lucide="code" class="w-7 h-7"></i><h2 class="text-3xl font-black">${t("featuredWork", lang)}</h2></div><div class="grid grid-cols-2 gap-6">${repos
                 .slice(0, 4)
                 .map(
                   (repo: Repository) =>
@@ -424,7 +476,7 @@ export default function PreviewPage() {
         }
         ${
           filteredSkills.length > 0
-            ? `<section><div class="flex justify-center gap-2 mb-8"><i data-lucide="sparkles" class="w-7 h-7"></i><h2 class="text-3xl font-black">Expertise</h2></div><div class="flex flex-wrap justify-center gap-3">${filteredSkills
+            ? `<section><div class="flex justify-center gap-2 mb-8"><i data-lucide="sparkles" class="w-7 h-7"></i><h2 class="text-3xl font-black">${t("expertise", lang)}</h2></div><div class="flex flex-wrap justify-center gap-3">${filteredSkills
                 .slice(0, 15)
                 .map(
                   (skill: string) =>
@@ -437,7 +489,7 @@ export default function PreviewPage() {
     }
 
     const htmlContent = `<!DOCTYPE html>
-<html lang="es" class="${isDarkMode ? "dark" : ""}">
+<html lang="${lang}" class="${isDarkMode ? "dark" : ""}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -446,15 +498,29 @@ export default function PreviewPage() {
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"><\/script>
   <style>
     :root { color-scheme: ${isDarkMode ? "dark" : "light"}; }
-    body { background: ${isDarkMode ? "#0a0a0a" : "#ffffff"}; color: ${isDarkMode ? "#fafafa" : "#0a0a0a"}; }
+    body { background: ${isDarkMode ? "#0a0a0a" : "#ffffff"}; color: ${isDarkMode ? "#fafafa" : "#0a0a0a"}; transition: background 0.2s, color 0.2s; }
+    #theme-btn { position:fixed; bottom:1rem; right:1rem; z-index:9999; padding:0.5rem 1rem; border:1px solid #666; border-radius:0.5rem; background:rgba(128,128,128,0.15); cursor:pointer; font-size:0.75rem; font-weight:700; backdrop-filter:blur(4px); }
+    #theme-btn:hover { background:rgba(128,128,128,0.3); }
   </style>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       lucide.createIcons();
     });
-  </script>
+    function toggleTheme() {
+      var isDark = document.documentElement.classList.toggle('dark');
+      document.body.style.background = isDark ? '#0a0a0a' : '#ffffff';
+      document.body.style.color = isDark ? '#fafafa' : '#0a0a0a';
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+    (function(){
+      var s = localStorage.getItem('theme');
+      if (s === 'dark') { document.documentElement.classList.add('dark'); document.body.style.background='#0a0a0a'; document.body.style.color='#fafafa'; }
+      else if (s === 'light') { document.documentElement.classList.remove('dark'); }
+    })();
+  <\/script>
 </head>
 <body>
+  <button id="theme-btn" onclick="toggleTheme()">${t("toggleTheme", lang)}</button>
   <div class="max-w-4xl mx-auto px-5 py-16">
     ${templateHTML}
   </div>
@@ -475,22 +541,39 @@ export default function PreviewPage() {
   const handlePublish = () => {
     startTransition(async () => {
       try {
-        await updatePortfolioDetails(profile);
-        alert("¡Portafolio publicado con éxito!");
-        window.open(`/${username}`, "_blank");
+        await updatePortfolioDetails(profile, templateId);
+
+        setDeployHistory((prev) => {
+          const existing = prev.findIndex((d) => d.template_id === templateId);
+          const entry = {
+            template_id: templateId,
+            deployed_at: new Date().toISOString(),
+          };
+          if (existing >= 0) {
+            const updated = [...prev];
+            updated[existing] = entry;
+            return updated;
+          }
+          return [...prev, entry];
+        });
+
+        toast.success(t("published", lang), {
+          position: "top-center",
+        });
+        setActiveTab("deploys");
       } catch {
-        alert("Error al publicar los cambios.");
+        toast.error(t("publishError", lang), {
+          position: "top-center",
+        });
       }
     });
   };
 
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-background overflow-hidden">
-      {/* PANEL IZQUIERDO: Configuración */}
       <div
         className={`${panelOpen ? "fixed inset-0 z-40 lg:static lg:z-20" : "hidden lg:block"} lg:w-110 border-r border-border bg-card/80 backdrop-blur-lg lg:backdrop-blur-none flex flex-col h-full`}
       >
-        {/* Header con Toggle y Tabs */}
         <div className="border-b border-border bg-background/50 p-4 lg:p-6 space-y-4">
           <div className="flex items-center justify-between lg:justify-start gap-3">
             <h2 className="text-sm lg:text-base font-bold uppercase tracking-wider">
@@ -505,7 +588,6 @@ export default function PreviewPage() {
             </button>
           </div>
 
-          {/* Tabs */}
           <div className="flex gap-1 bg-background/50 rounded-lg p-1 border border-border/50">
             <button
               onClick={() => setActiveTab("profile")}
@@ -515,7 +597,7 @@ export default function PreviewPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Profile
+              {t("profile", lang)}
             </button>
             <button
               onClick={() => setActiveTab("repos")}
@@ -525,7 +607,7 @@ export default function PreviewPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Repos
+              {t("repos", lang)}
             </button>
             <button
               onClick={() => setActiveTab("import")}
@@ -535,25 +617,33 @@ export default function PreviewPage() {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              Import
+              {t("import", lang)}
+            </button>
+            <button
+              onClick={() => setActiveTab("deploys")}
+              className={`flex-1 px-3 py-2 rounded text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                activeTab === "deploys"
+                  ? "bg-primary text-background shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t("deploys", lang)}
             </button>
           </div>
         </div>
 
-        {/* Contenido del Panel - Scrolleable */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="space-y-6">
-            {/* TAB: PROFILE */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 lg:p-6">
+          <div className="space-y-6 pb-8">
             {activeTab === "profile" && (
               <>
                 <section>
                   <h3 className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-                    Personal Information
+                    {t("personalInfo", lang)}
                   </h3>
                   <div className="space-y-4">
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Display Name
+                        {t("displayName", lang)}
                       </label>
                       <input
                         type="text"
@@ -566,7 +656,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Professional Title
+                        {t("headline", lang)}
                       </label>
                       <input
                         type="text"
@@ -579,7 +669,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Bio
+                        {t("bio", lang)}
                       </label>
                       <textarea
                         rows={4}
@@ -600,7 +690,7 @@ export default function PreviewPage() {
                   <div className="space-y-3">
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Email
+                        {t("email", lang)}
                       </label>
                       <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                         <div className="px-3 text-muted-foreground flex items-center">
@@ -618,7 +708,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Website / Link
+                        {t("link", lang)}
                       </label>
                       <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                         <div className="px-3 text-muted-foreground flex items-center">
@@ -636,7 +726,7 @@ export default function PreviewPage() {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground mb-1.5 block font-mono">
-                        Location
+                        {t("location", lang)}
                       </label>
                       <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
                         <div className="px-3 text-muted-foreground flex items-center">
@@ -657,16 +747,15 @@ export default function PreviewPage() {
               </>
             )}
 
-            {/* TAB: REPOS */}
             {activeTab === "repos" && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-                  Featured Repositories ({repos.length})
+                  {t("selectedRepos", lang)} ({repos.length})
                 </h3>
                 {repos.length === 0 ? (
                   <div className="p-4 rounded-lg border border-dashed border-border text-center">
                     <p className="text-sm text-muted-foreground">
-                      No repositories selected yet
+                      {t("noRepos", lang)}
                     </p>
                   </div>
                 ) : (
@@ -687,7 +776,8 @@ export default function PreviewPage() {
                           </a>
                           {(repo.stargazerCount ?? 0) > 0 && (
                             <span className="text-[10px] font-semibold text-yellow-500 flex items-center gap-1 whitespace-nowrap">
-                              ⭐ {repo.stargazerCount}
+                              <StarIcon sx={{ fontSize: 10 }} />{" "}
+                              {repo.stargazerCount}
                             </span>
                           )}
                         </div>
@@ -706,16 +796,14 @@ export default function PreviewPage() {
               </section>
             )}
 
-            {/* TAB: IMPORT */}
             {activeTab === "import" && (
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Magic CV Import
+                  {t("import", lang)}
                 </h3>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Upload your CV and our AI will extract all your information
-                  automatically.
+                  {t("importCV", lang)}
                 </p>
                 <label
                   className={`flex flex-col items-center justify-center w-full h-40 border-2 ${
@@ -732,7 +820,7 @@ export default function PreviewPage() {
                         className="mb-3"
                       />
                       <span className="text-xs font-semibold animate-pulse">
-                        Processing with AI...
+                        {t("processing", lang)}
                       </span>
                     </div>
                   ) : (
@@ -742,10 +830,10 @@ export default function PreviewPage() {
                         className="text-muted-foreground mb-3 group-hover:text-primary transition-colors"
                       />
                       <span className="text-sm font-semibold text-foreground">
-                        Drop your CV here
+                        {t("dragOrClick", lang)}
                       </span>
                       <span className="text-xs text-muted-foreground mt-1">
-                        or click to browse
+                        {t("supportedFormats", lang)}
                       </span>
                       <input
                         type="file"
@@ -758,27 +846,120 @@ export default function PreviewPage() {
                   )}
                 </label>
                 <p className="text-[10px] text-muted-foreground mt-4 leading-relaxed">
-                  💡 <strong>Pro Tip:</strong> PDF format works best. The AI
-                  will extract your work experience, education, and skills.
+                  {t("supportedFormats", lang)}
                 </p>
+              </section>
+            )}
+
+            {activeTab === "deploys" && (
+              <section className="space-y-4">
+                <h3 className="text-xs font-semibold uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                  <RocketLaunchOutlinedIcon
+                    sx={{ fontSize: 12 }}
+                    className="text-violet-400"
+                  />
+                  {t("liveDeployments", lang)}
+                </h3>
+
+                {deployHistory.length > 0 ? (
+                  <div className="space-y-2">
+                    {deployHistory
+                      .slice()
+                      .sort(
+                        (a, b) =>
+                          new Date(b.deployed_at).getTime() -
+                          new Date(a.deployed_at).getTime(),
+                      )
+                      .map((deploy) => {
+                        const deployUrl =
+                          typeof window !== "undefined"
+                            ? `${window.location.origin}/${username}?t=${deploy.template_id}&lang=${lang}`
+                            : `/${username}?t=${deploy.template_id}&lang=${lang}`;
+                        const isActive = deploy.template_id === templateId;
+                        return (
+                          <div
+                            key={deploy.template_id}
+                            className={`p-3 rounded-xl border transition-colors ${isActive ? "border-violet-400/40 bg-violet-500/5" : "border-border bg-background"}`}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-foreground capitalize">
+                                  {deploy.template_id}
+                                </span>
+                                {isActive && (
+                                  <span className="px-1.5 py-0.5 bg-violet-500/15 text-violet-400 text-[9px] font-bold uppercase rounded-full">
+                                    activo
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[9px] text-muted-foreground">
+                                {new Date(deploy.deployed_at).toLocaleString(
+                                  "es-MX",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => window.open(deployUrl, "_blank")}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-violet-500/15 text-violet-400 text-xs font-semibold rounded-lg hover:bg-violet-500/25 transition-colors"
+                              >
+                                <OpenInNewOutlinedIcon sx={{ fontSize: 11 }} />
+                                {t("viewLive", lang)}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(deployUrl);
+                                  toast.success(t("linkCopied", lang), {
+                                    position: "top-center",
+                                  });
+                                }}
+                                title={t("copyLink", lang)}
+                                className="flex items-center justify-center px-3 py-1.5 border border-border bg-background text-xs rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <ContentCopyOutlinedIcon
+                                  sx={{ fontSize: 11 }}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <div className="p-6 rounded-lg border border-dashed border-border text-center space-y-2">
+                    <RocketLaunchOutlinedIcon className="text-muted-foreground mx-auto" />
+                    <p className="text-sm text-muted-foreground">
+                      {t("noDeployments", lang)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("noDeploymentsHint", lang)}
+                    </p>
+                  </div>
+                )}
               </section>
             )}
           </div>
         </div>
       </div>
 
-      {/* Toggle Button (Mobile only) */}
       {!panelOpen && (
         <button
           onClick={() => setPanelOpen(true)}
           className="fixed bottom-6 right-6 lg:hidden z-30 w-12 h-12 rounded-full bg-primary text-background shadow-lg hover:bg-primary/90 transition-all flex items-center justify-center font-bold text-lg"
           aria-label="Abrir panel de edición"
         >
-          ⚙️
+          <SettingsOutlinedIcon sx={{ fontSize: 20 }} />
         </button>
       )}
 
-      {/* Overlay (Mobile) */}
       {panelOpen && (
         <div
           onClick={() => setPanelOpen(false)}
@@ -786,9 +967,7 @@ export default function PreviewPage() {
         />
       )}
 
-      {/* PANEL DERECHO: Previsualización en Vivo */}
       <div className="flex-1 bg-secondary/5 flex flex-col relative h-screen overflow-hidden">
-        {/* Toolbar de Previsualización */}
         <div className="h-14 border-b border-border/50 bg-card/80 flex justify-between items-center px-6 sticky top-0 z-10 backdrop-blur-md">
           <div className="flex gap-4 items-center">
             <div className="flex gap-1 bg-background/50 border border-border p-1 rounded-md">
@@ -811,20 +990,29 @@ export default function PreviewPage() {
               onChange={(e) => setTemplateId(e.target.value)}
               className="px-3 py-1.5 text-xs font-mono font-bold uppercase bg-background border border-border rounded-md text-foreground hover:border-primary focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors cursor-pointer"
             >
-              <option value="minimal">Minimal</option>
-              <option value="modern">Modern</option>
-              <option value="professional">Professional</option>
-              <option value="creative">Creative</option>
+              <option value="minimal">{t("tmplMinimal", lang)}</option>
+              <option value="modern">{t("tmplModern", lang)}</option>
+              <option value="professional">
+                {t("tmplProfessional", lang)}
+              </option>
+              <option value="creative">{t("tmplCreative", lang)}</option>
             </select>
             <div className="w-px h-6 bg-border/50" />
             <AnimatedThemeToggler />
+            <button
+              onClick={() => setLang((l) => (l === "es" ? "en" : "es"))}
+              className="px-3 py-1.5 border border-border bg-background hover:bg-muted text-xs font-bold uppercase text-muted-foreground rounded-md cursor-pointer"
+              title={t("toggleLang", lang)}
+            >
+              {lang === "es" ? "EN" : "ES"}
+            </button>
           </div>
           <div className="flex gap-3">
             <button
               onClick={handleExportHTML}
               className="items-center gap-2 px-3 py-1.5 border border-border bg-background hover:bg-muted text-xs font-bold uppercase text-muted-foreground rounded-md hidden sm:flex"
             >
-              <DownloadOutlinedIcon fontSize="small" /> Export to HTML
+              <DownloadOutlinedIcon fontSize="small" /> {t("exportHTML", lang)}
             </button>
             <button
               onClick={handlePublish}
@@ -832,18 +1020,17 @@ export default function PreviewPage() {
               className="flex items-center gap-2 px-4 py-1.5 bg-foreground text-background hover:bg-foreground/90 text-xs font-bold uppercase rounded-md disabled:opacity-50"
             >
               <PublishOutlinedIcon fontSize="small" />{" "}
-              {isPending ? "Saving..." : "Deploy"}
+              {isPending ? t("saving", lang) : t("deploy", lang)}
             </button>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-3 py-1.5 border border-border bg-background hover:bg-muted text-xs font-bold uppercase text-muted-foreground rounded-md"
             >
-              <LogoutOutlinedIcon fontSize="small" /> Sign Out
+              <LogoutOutlinedIcon fontSize="small" /> {t("signOut", lang)}
             </button>
           </div>
         </div>
 
-        {/* Canvas de Renderizado */}
         <div className="flex-1 overflow-y-auto p-4 md:p-10 flex justify-center items-start">
           {previewMode === "mobile" ? (
             <div className="relative w-85 md:w-95 shrink-0 animate-in zoom-in-95 duration-500 mx-auto mt-4">
@@ -869,6 +1056,7 @@ export default function PreviewPage() {
                     expandedJobs={expandedJobs}
                     toggleJobExpanded={toggleJobExpanded}
                     filteredSkills={filteredSkills}
+                    lang={lang}
                   />
                 </div>
               </div>
@@ -885,6 +1073,7 @@ export default function PreviewPage() {
                 expandedJobs={expandedJobs}
                 toggleJobExpanded={toggleJobExpanded}
                 filteredSkills={filteredSkills}
+                lang={lang}
               />
             </div>
           )}
@@ -904,6 +1093,7 @@ function PortfolioContent({
   expandedJobs,
   toggleJobExpanded,
   filteredSkills,
+  lang = "es",
 }: {
   profile: Profile;
   repos: Repository[];
@@ -914,13 +1104,13 @@ function PortfolioContent({
   expandedJobs: Record<string, boolean>;
   toggleJobExpanded: (idx: number) => void;
   filteredSkills: string[];
+  lang?: Lang;
 }) {
   if (template === "minimal") {
     return (
       <div
         className={`w-full ${isMobile ? "space-y-8 pb-10" : "space-y-12 pb-20"} font-sans`}
       >
-        {/* Intro */}
         <section
           className={`flex ${isMobile ? "flex-row gap-3 items-start" : "flex-col-reverse sm:flex-row items-start justify-between gap-6"}`}
         >
@@ -973,7 +1163,6 @@ function PortfolioContent({
           </div>
         </section>
 
-        {/* About */}
         {profile.bio && (
           <section className="space-y-3">
             <h2
@@ -987,13 +1176,12 @@ function PortfolioContent({
           </section>
         )}
 
-        {/* Work Experience */}
         {cv.work && cv.work.length > 0 && (
           <section className="space-y-6">
             <h2
               className={`${isMobile ? "text-lg" : "text-xl"} font-bold tracking-tight`}
             >
-              Work Experience
+              {t("workExperience", lang)}
             </h2>
             <div className="space-y-6">
               {cv.work.map((job: WorkExperience, i: number) => {
@@ -1039,13 +1227,12 @@ function PortfolioContent({
           </section>
         )}
 
-        {/* Education */}
         {cv.education && cv.education.length > 0 && (
           <section className="space-y-6">
             <h2
               className={`${isMobile ? "text-lg" : "text-xl"} font-bold tracking-tight`}
             >
-              Education
+              {t("education", lang)}
             </h2>
             <div className="space-y-6">
               {cv.education.map((edu: Education, i: number) => (
@@ -1072,13 +1259,12 @@ function PortfolioContent({
           </section>
         )}
 
-        {/* Skills */}
         {filteredSkills.length > 0 && (
           <section className="space-y-4">
             <h2
               className={`${isMobile ? "text-lg" : "text-xl"} font-bold tracking-tight`}
             >
-              Skills
+              {t("skills", lang)}
             </h2>
             <div className="flex flex-wrap gap-2.5">
               {filteredSkills.map((skill: string) => {
@@ -1105,12 +1291,11 @@ function PortfolioContent({
           </section>
         )}
 
-        {/* Projects */}
         <section className="space-y-6">
           <h2
             className={`${isMobile ? "text-lg" : "text-xl"} font-bold tracking-tight`}
           >
-            Featured Projects
+            {t("featuredProjects", lang)}
           </h2>
           <div
             className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} gap-4`}
@@ -1135,7 +1320,7 @@ function PortfolioContent({
                         </a>
                       </h3>
                       <span className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                        ⭐ {repo.stars}
+                        <StarIcon sx={{ fontSize: 11 }} /> {repo.stars}
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-3 mb-4 flex-1">
@@ -1264,7 +1449,7 @@ function PortfolioContent({
           <section>
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <span className="h-1 w-8 bg-primary rounded-full" />
-              Work Experience
+              {t("workExperience", lang)}
             </h2>
             <div className="space-y-4">
               {cv.work.map((job: WorkExperience, idx: number) => {
@@ -1316,7 +1501,7 @@ function PortfolioContent({
           <section>
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <span className="h-1 w-8 bg-primary rounded-full" />
-              Education
+              {t("education", lang)}
             </h2>
             <div className="space-y-4">
               {cv.education.map((edu: Education, idx: number) => (
@@ -1344,7 +1529,7 @@ function PortfolioContent({
         <section>
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <span className="h-1 w-8 bg-primary rounded-full" />
-            Featured Work
+            {t("featuredWork", lang)}
           </h2>
           <div
             className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-5`}
@@ -1369,7 +1554,7 @@ function PortfolioContent({
                       {repo.lang}
                     </span>
                     <span className="text-xs text-yellow-500">
-                      ⭐ {repo.stargazerCount}
+                      <StarIcon sx={{ fontSize: 11 }} /> {repo.stargazerCount}
                     </span>
                   </div>
                 </div>
@@ -1382,7 +1567,7 @@ function PortfolioContent({
           <section>
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
               <span className="h-1 w-8 bg-primary rounded-full" />
-              Skills
+              {t("skills", lang)}
             </h2>
             <div className="flex flex-wrap gap-3">
               {filteredSkills.slice(0, 12).map((skill: string) => (
@@ -1456,7 +1641,7 @@ function PortfolioContent({
         {profile.bio && (
           <section className="p-6 bg-card rounded-lg border border-border">
             <h2 className="font-bold text-lg mb-3 text-primary">
-              Professional Summary
+              {t("professionalSummary", lang)}
             </h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               {profile.bio}
@@ -1467,7 +1652,7 @@ function PortfolioContent({
         {cv.work && cv.work.length > 0 && (
           <section>
             <h2 className="font-bold text-lg mb-4 text-primary border-b-2 border-primary pb-2">
-              Work Experience
+              {t("workExperience", lang)}
             </h2>
             <div className="space-y-4">
               {cv.work.map((job: WorkExperience, idx: number) => {
@@ -1518,7 +1703,7 @@ function PortfolioContent({
         {cv.education && cv.education.length > 0 && (
           <section>
             <h2 className="font-bold text-lg mb-4 text-primary border-b-2 border-primary pb-2">
-              Education
+              {t("education", lang)}
             </h2>
             <div className="space-y-3">
               {cv.education.map((edu: Education, idx: number) => (
@@ -1543,7 +1728,7 @@ function PortfolioContent({
 
         <section>
           <h2 className="font-bold text-lg mb-4 text-primary border-b-2 border-primary pb-2">
-            Featured Projects
+            {t("featuredProjects", lang)}
           </h2>
           <div className="space-y-4">
             {repos.slice(0, 3).map((repo: Repository) => (
@@ -1575,7 +1760,7 @@ function PortfolioContent({
         {filteredSkills.length > 0 && (
           <section>
             <h2 className="font-bold text-lg mb-4 text-primary border-b-2 border-primary pb-2">
-              Core Competencies
+              {t("coreCompetencies", lang)}
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {filteredSkills.slice(0, 9).map((skill: string) => (
@@ -1668,7 +1853,7 @@ function PortfolioContent({
           <p
             className={`${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}
           >
-            Projects
+            {t("projects", lang)}
           </p>
         </div>
         <div
@@ -1682,7 +1867,7 @@ function PortfolioContent({
           <p
             className={`${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}
           >
-            Skills
+            {t("skills", lang)}
           </p>
         </div>
         <div
@@ -1691,19 +1876,21 @@ function PortfolioContent({
           <h3
             className={`font-bold ${isMobile ? "text-xl" : "text-3xl"} text-primary mb-1`}
           >
-            ∞
+            <AllInclusiveIcon fontSize={isMobile ? "small" : "medium"} />
           </h3>
           <p
             className={`${isMobile ? "text-xs" : "text-sm"} text-muted-foreground`}
           >
-            Passion
+            {t("passion", lang)}
           </p>
         </div>
       </div>
 
       {cv.work && cv.work.length > 0 && (
         <section>
-          <h2 className="text-3xl font-black mb-8 text-center">Experience</h2>
+          <h2 className="text-3xl font-black mb-8 text-center">
+            {t("experience", lang)}
+          </h2>
           <div className="space-y-4">
             {cv.work.map((job: WorkExperience, idx: number) => (
               <div
@@ -1736,7 +1923,9 @@ function PortfolioContent({
 
       {cv.education && cv.education.length > 0 && (
         <section>
-          <h2 className="text-3xl font-black mb-8 text-center">Education</h2>
+          <h2 className="text-3xl font-black mb-8 text-center">
+            {t("education", lang)}
+          </h2>
           <div className="space-y-4">
             {cv.education.map((edu: Education, idx: number) => (
               <div
@@ -1761,7 +1950,9 @@ function PortfolioContent({
       )}
 
       <section>
-        <h2 className="text-3xl font-black mb-8 text-center">Featured Work</h2>
+        <h2 className="text-3xl font-black mb-8 text-center">
+          {t("featuredWork", lang)}
+        </h2>
         <div
           className={`grid ${isMobile ? "grid-cols-1" : "grid-cols-2"} gap-6`}
         >
@@ -1791,7 +1982,9 @@ function PortfolioContent({
 
       {filteredSkills.length > 0 && (
         <section>
-          <h2 className="text-3xl font-black mb-8 text-center">Expertise</h2>
+          <h2 className="text-3xl font-black mb-8 text-center">
+            {t("expertise", lang)}
+          </h2>
           <div className="flex flex-wrap justify-center gap-3">
             {filteredSkills.slice(0, 15).map((skill: string) => (
               <div

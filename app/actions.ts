@@ -70,7 +70,10 @@ export async function getCurrentUserPortfolio() {
   return data || null;
 }
 
-export async function updatePortfolioDetails(profileData: Profile) {
+export async function updatePortfolioDetails(
+  profileData: Profile,
+  templateId?: string,
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -78,17 +81,52 @@ export async function updatePortfolioDetails(profileData: Profile) {
 
   if (!user) throw new Error("No autenticado");
 
+  const updateData: Record<string, unknown> = {
+    display_name: profileData.name,
+    headline: profileData.headline,
+    bio: profileData.bio,
+    email: profileData.email,
+    link: profileData.link,
+    location: profileData.location,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (templateId) {
+    updateData.template_id = templateId;
+
+    // Obtener deploy_history actual
+    const { data: current } = await supabase
+      .from("portfolios")
+      .select("deploy_history")
+      .eq("user_id", user.id)
+      .single();
+
+    const history: Array<{ template_id: string; deployed_at: string }> =
+      (current?.deploy_history as Array<{
+        template_id: string;
+        deployed_at: string;
+      }>) || [];
+
+    const existingIndex = history.findIndex(
+      (d) => d.template_id === templateId,
+    );
+    const deployEntry = {
+      template_id: templateId,
+      deployed_at: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      history[existingIndex] = deployEntry;
+    } else {
+      history.push(deployEntry);
+    }
+
+    updateData.deploy_history = history;
+  }
+
   const { error } = await supabase
     .from("portfolios")
-    .update({
-      display_name: profileData.name,
-      headline: profileData.headline,
-      bio: profileData.bio,
-      email: profileData.email,
-      link: profileData.link,
-      location: profileData.location,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("user_id", user.id);
 
   if (error) {
@@ -184,6 +222,62 @@ export async function extractCVDataWithGemini(
 
     const responseText = result.response.text();
     const parsedData = JSON.parse(responseText);
+
+    // Filtrar soft skills
+    const softSkillsKeywords = [
+      "resolución de problemas",
+      "pensamiento crítico",
+      "adaptabilidad",
+      "trabajo en equipo",
+      "comunicación",
+      "liderazgo",
+      "gestión del tiempo",
+      "pensamiento estratégico",
+      "organización",
+      "proactividad",
+      "creatividad",
+      "empatía",
+      "negociación",
+      "inteligencia emocional",
+      "pensamiento analítico",
+      "colaboración",
+      "toma de decisiones",
+      "gestión de conflictos",
+      "mentoría",
+      "coaching",
+      "facilitación",
+      "presentación",
+      "escritura",
+      "escucha activa",
+      "atención al detalle",
+      "multitarea",
+      "flexibilidad",
+      "iniciativa",
+      "responsabilidad",
+      "confiabilidad",
+      "transparencia",
+      "honestidad",
+      "integridad",
+      "ética",
+      "motivación",
+      "pasión",
+      "entusiasmo",
+      "perseverancia",
+      "resiliencia",
+      "optimismo",
+      "paciencia",
+    ];
+
+    if (parsedData.skills && Array.isArray(parsedData.skills)) {
+      parsedData.skills = parsedData.skills.filter(
+        (skill: string) =>
+          !softSkillsKeywords.some(
+            (softSkill) =>
+              skill.toLowerCase().includes(softSkill) ||
+              softSkill.includes(skill.toLowerCase()),
+          ),
+      );
+    }
 
     return parsedData;
   } catch (error: Error | unknown) {

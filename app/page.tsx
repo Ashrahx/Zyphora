@@ -13,9 +13,20 @@ import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import PaletteIcon from "@mui/icons-material/Palette";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LandingPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      router.replace(`/auth/callback?code=${code}`);
+    }
+  }, [searchParams, router]);
+
   const [showDemo, setShowDemo] = useState(false);
   const [demoData, setDemoData] = useState({
     name: "Juan Pérez",

@@ -3,8 +3,7 @@
 import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { GET_USER_PROFILE_QUERY } from "@/lib/github";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Profile, CVData } from "@/lib/types";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -22,9 +21,7 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
             );
-          } catch {
-            // El catch se mantiene vacío ya que es un manejo de error controlado de Next.js
-          }
+          } catch {}
         },
       },
     },
@@ -38,8 +35,7 @@ export async function signInWithGithub() {
     provider: "github",
     options: {
       redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
-      // ESTA ES LA LÍNEA QUE FALTA: Pedimos acceso al perfil, email y repos públicos
-      scopes: 'read:user user:email public_repo' 
+      scopes: "read:user user:email public_repo",
     },
   });
 
@@ -53,119 +49,12 @@ export async function signInWithGithub() {
   }
 }
 
-export async function fetchUserRepositories() {
-  const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session)
-    throw new Error("No estás autenticado. La sesión expiró o no existe.");
-
-  const githubToken = session.provider_token;
-  const username = session.user.user_metadata.preferred_username;
-
-  if (!githubToken) {
-    throw new Error(
-      "No se encontró el token de GitHub. Asegúrate de configurar los scopes en Supabase.",
-    );
-  }
-
-  const { GraphQLClient } = await import("graphql-request");
-  const githubClientDynamic = new GraphQLClient(
-    "https://api.github.com/graphql",
-    { headers: { authorization: `Bearer ${githubToken}` } },
-  );
-
-  try {
-    const data: any = await githubClientDynamic.request(
-      GET_USER_PROFILE_QUERY,
-      {
-        username: username,
-      },
-    );
-    return data.user.repositories.nodes;
-  } catch (error) {
-    console.error("Error extrayendo datos de GitHub API:", error);
-    throw new Error("No se pudo contactar con GitHub.");
-  }
-}
-
-export async function saveProfileConfig(profileData: any) {
+export async function getCurrentUserPortfolio() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) throw new Error("Acceso denegado.");
-
-  const { error } = await supabase.from("portfolios").upsert({
-    user_id: user.id,
-    display_name: profileData.name,
-    bio: profileData.bio,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) {
-    console.error("Error guardando en BD:", error.message);
-    throw error;
-  }
-
-  return { success: true };
-}
-
-// NUEVA FUNCIÓN AÑADIDA: Guarda la selección de repositorios
-export async function saveSelectedRepos(selectedRepos: any[]) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("Acceso denegado.");
-
-  // Obtenemos el username de GitHub para usarlo en la URL pública
-  const username = user.user_metadata.preferred_username;
-
-  const { error } = await supabase.from("portfolios").upsert({
-    user_id: user.id,
-    github_username: username, // Usaremos esto para la ruta pública
-    display_name: user.user_metadata.full_name || username,
-    selected_repos: selectedRepos,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' }); // onConflict asegura que si el usuario ya tiene un registro, se actualice en lugar de crear uno nuevo
-
-  if (error) {
-    console.error("Error guardando repositorios:", error.message);
-    throw new Error("No se pudo guardar la selección.");
-  }
-
-  return { success: true, username };
-}
-
-export async function saveTemplateSelection(templateId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("Acceso denegado.");
-
-  const { error } = await supabase
-    .from("portfolios")
-    .update({ 
-      template_id: templateId,
-      updated_at: new Date().toISOString() 
-    })
-    .eq('user_id', user.id);
-
-  if (error) {
-    console.error("Error guardando el template:", error.message);
-    throw new Error("No se pudo guardar la plantilla.");
-  }
-
-  return { success: true };
-}
-
-export async function getCurrentUserPortfolio() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
   if (!user) throw new Error("No autenticado");
 
   const { data, error } = await supabase
@@ -174,17 +63,19 @@ export async function getCurrentUserPortfolio() {
     .eq("user_id", user.id)
     .single();
 
-  if (error && error.code !== 'PGRST116') {
+  if (error && error.code !== "PGRST116") {
     console.error("Error obteniendo portafolio:", error.message);
   }
 
   return data || null;
 }
 
-export async function updatePortfolioDetails(profileData: any) {
+export async function updatePortfolioDetails(profileData: Profile) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   if (!user) throw new Error("No autenticado");
 
   const { error } = await supabase
@@ -207,9 +98,11 @@ export async function updatePortfolioDetails(profileData: any) {
   return { success: true };
 }
 
-export async function updatePortfolioFromCV(cvData: any) {
+export async function updatePortfolioFromCV(cvData: CVData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("No autenticado");
 
   const { error } = await supabase
@@ -231,9 +124,14 @@ export async function updatePortfolioFromCV(cvData: any) {
   return { success: true };
 }
 
-export async function extractCVDataWithGemini(base64Data: string, mimeType: string) {
+export async function extractCVDataWithGemini(
+  base64Data: string,
+  mimeType: string,
+) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("No autenticado");
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -241,13 +139,12 @@ export async function extractCVDataWithGemini(base64Data: string, mimeType: stri
 
   const { GoogleGenerativeAI } = await import("@google/generative-ai");
   const genAI = new GoogleGenerativeAI(apiKey);
-  
-  // MEJORA: Forzamos a Gemini a responder en formato JSON estricto
-  const model = genAI.getGenerativeModel({ 
+
+  const model = genAI.getGenerativeModel({
     model: "gemini-2.5-flash",
     generationConfig: {
       responseMimeType: "application/json",
-    }
+    },
   });
 
   const prompt = `
@@ -280,20 +177,26 @@ export async function extractCVDataWithGemini(base64Data: string, mimeType: stri
       {
         inlineData: {
           data: base64Data,
-          mimeType: mimeType
-        }
-      }
+          mimeType: mimeType,
+        },
+      },
     ]);
 
     const responseText = result.response.text();
-    // Como forzamos el mimeType a JSON, podemos parsearlo directamente
     const parsedData = JSON.parse(responseText);
-    
+
     return parsedData;
-    
-  } catch (error: any) {
-    // Imprimimos el error real en la consola de tu servidor para saber exactamente qué falló
-    console.error("DETALLE DEL ERROR GEMINI:", error.message || error);
-    throw new Error("La inteligencia artificial no pudo analizar el documento.");
+  } catch (error: Error | unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("DETALLE DEL ERROR GEMINI:", errorMessage);
+    throw new Error(
+      "La inteligencia artificial no pudo analizar el documento.",
+    );
   }
+}
+
+export async function logOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/");
 }

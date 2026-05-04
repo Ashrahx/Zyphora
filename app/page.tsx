@@ -5,15 +5,17 @@ import { Button } from "@/components/ui/button";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { signInWithGithub } from "./actions";
+import Link from "next/link";
 
 export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans">
       <nav className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container max-w-300 h-16 flex items-center justify-between">
+        {/* CORRECCIÓN AQUÍ: Agregado max-w-7xl, mx-auto, px-6 y w-full */}
+        <div className="max-w-7xl mx-auto px-6 w-full h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">
             <span className="text-primary font-mono font-bold text-xl tracking-tighter">
-              Zyphora
+              Prism
             </span>
             <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground">
               <a href="#" className="hover:text-primary transition-colors">
@@ -58,9 +60,9 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
-          Zyphora conecta directamente con tu GitHub para generar
-          instantáneamente un portafolio de alto rendimiento diseñado para
-          ingenieros. Cero drag-and-drop. Solo datos puros.
+          Prism conecta directamente con tu GitHub para generar instantáneamente
+          un portafolio de alto rendimiento diseñado para ingenieros. Cero
+          drag-and-drop. Solo datos puros.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -85,16 +87,27 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border py-8">
-        <div className="container max-w-[1200px] flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          <p>© 2024 DEVFOLIO. BUILT FOR THE ELITE.</p>
+        {/* CORRECCIÓN AQUÍ: Agregado max-w-7xl, mx-auto, px-6 y w-full */}
+        <div className="max-w-7xl mx-auto px-6 w-full flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          <p>© 2024 PRISM. BUILT FOR THE ELITE.</p>
           <div className="flex gap-6">
-            <a href="#" className="hover:text-primary">
+            <Link
+              href="/privacy"
+              className="hover:text-primary transition-colors"
+            >
               Privacy
-            </a>
-            <a href="#" className="hover:text-primary">
+            </Link>
+            <Link
+              href="/terms"
+              className="hover:text-primary transition-colors"
+            >
               Terms
-            </a>
-            <a href="#" className="hover:text-primary">
+            </Link>
+            <a
+              href="https://docs.github.com/en/rest"
+              target="_blank"
+              className="hover:text-primary transition-colors"
+            >
               GitHub API
             </a>
           </div>

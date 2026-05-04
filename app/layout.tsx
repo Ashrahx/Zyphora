@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -17,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Zyphora | Porfolio Engine",
+  title: "Prism | Portfolio Engine",
   description: "High-performance portfolio generator for engineers.",
 };
 
@@ -38,9 +39,11 @@ export default function RootLayout({
         "font-sans",
       )}
     >
-      <body 
+      <body
         suppressHydrationWarning
-        className="min-h-full flex flex-col bg-background text-foreground">
+        className="h-screen flex flex-col bg-background text-foreground overflow-hidden"
+      >
+        <Toaster position="top-right" richColors />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

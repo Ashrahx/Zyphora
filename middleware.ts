@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_ROUTES = ["/editor", "/admin"];
-const PUBLIC_ROUTES = ["/", "/auth/callback"];
+const PUBLIC_ROUTES = ["/", "/auth/callback", "/api/auth/signin"];
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;

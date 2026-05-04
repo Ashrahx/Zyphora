@@ -28,27 +28,6 @@ export async function createClient() {
   );
 }
 
-export async function signInWithGithub() {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "github",
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
-      scopes: "read:user user:email public_repo",
-    },
-  });
-
-  if (error) {
-    console.error("Error de autenticación:", error.message);
-    throw new Error("Fallo al iniciar el flujo de GitHub");
-  }
-
-  if (data.url) {
-    redirect(data.url);
-  }
-}
-
 export async function getCurrentUserPortfolio() {
   const supabase = await createClient();
   const {

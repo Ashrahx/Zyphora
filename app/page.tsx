@@ -11,7 +11,7 @@ import LocationOnIcon from "@mui/icons-material/LocationOn";
 import LaptopIcon from "@mui/icons-material/Laptop";
 import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import PaletteIcon from "@mui/icons-material/Palette";
-import { signInWithGithub } from "./actions";
+
 import Link from "next/link";
 import { useState } from "react";
 
@@ -50,7 +50,7 @@ export default function LandingPage() {
     );
 
     setTimeout(() => {
-      signInWithGithub();
+      window.location.href = "/api/auth/signin";
     }, 800);
   };
 
@@ -117,15 +117,15 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <form action={signInWithGithub}>
-            <Button
-              type="submit"
-              size="lg"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 flex items-center gap-2"
-            >
-              <GitHubIcon fontSize="small" /> Login with GitHub
-            </Button>
-          </form>
+          <Button
+            size="lg"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold px-8 flex items-center gap-2"
+            onClick={() => {
+              window.location.href = "/api/auth/signin";
+            }}
+          >
+            <GitHubIcon fontSize="small" /> Login with GitHub
+          </Button>
 
           <Button
             onClick={() => setShowDemo(true)}

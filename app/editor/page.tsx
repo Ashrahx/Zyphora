@@ -229,7 +229,7 @@ export default function PreviewPage() {
           });
           window.location.reload();
         } catch (error) {
-          toast.error("Error procesando el CV. Revisa la consola.", {
+          toast.error("Error procesando el CV. Intenta con otro archivo.", {
             position: "top-center",
           });
           console.error(error);

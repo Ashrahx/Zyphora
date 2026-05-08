@@ -578,6 +578,10 @@ export default function PreviewPage() {
 
         toast.success(t("published", lang), {
           position: "top-center",
+          action: {
+            label: t("viewLive", lang),
+            onClick: () => window.open(`/${username}`, "_blank"),
+          },
         });
         setActiveTab("deploys");
       } catch {

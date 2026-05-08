@@ -40,9 +40,9 @@ export async function getCurrentUserPortfolio() {
     .from("portfolios")
     .select("*")
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
+  if (error) {
     console.error("Error obteniendo portafolio:", error.message);
   }
 
@@ -60,7 +60,15 @@ export async function updatePortfolioDetails(
 
   if (!user) throw new Error("No autenticado");
 
+  const meta = user.user_metadata as {
+    user_name?: string;
+    preferred_username?: string;
+  };
+  const githubUsername = meta?.user_name || meta?.preferred_username || "";
+
   const updateData: Record<string, unknown> = {
+    user_id: user.id,
+    github_username: githubUsername,
     display_name: profileData.name,
     headline: profileData.headline,
     bio: profileData.bio,
@@ -78,7 +86,7 @@ export async function updatePortfolioDetails(
       .from("portfolios")
       .select("deploy_history")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     const history: Array<{ template_id: string; deployed_at: string }> =
       (current?.deploy_history as Array<{
@@ -105,8 +113,7 @@ export async function updatePortfolioDetails(
 
   const { error } = await supabase
     .from("portfolios")
-    .update(updateData)
-    .eq("user_id", user.id);
+    .upsert(updateData, { onConflict: "user_id", ignoreDuplicates: false });
 
   if (error) {
     throw new Error("No se pudo actualizar el perfil.");

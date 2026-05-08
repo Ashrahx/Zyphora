@@ -30,7 +30,7 @@ export default function PublicPortfolio() {
           .from("portfolios")
           .select("*")
           .eq("github_username", username)
-          .single();
+          .maybeSingle();
 
         if (queryError || !data) {
           setError(true);

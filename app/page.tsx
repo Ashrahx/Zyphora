@@ -13,10 +13,10 @@ import PhoneIphoneIcon from "@mui/icons-material/PhoneIphone";
 import PaletteIcon from "@mui/icons-material/Palette";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LandingPage() {
+function AuthCodeHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -27,6 +27,10 @@ export default function LandingPage() {
     }
   }, [searchParams, router]);
 
+  return null;
+}
+
+export default function LandingPage() {
   const [lang, setLang] = useState<"en" | "es">("es");
   const [showDemo, setShowDemo] = useState(false);
   const [demoData, setDemoData] = useState({
@@ -85,6 +89,9 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans">
+      <Suspense fallback={null}>
+        <AuthCodeHandler />
+      </Suspense>
       <nav className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 w-full h-16 flex items-center justify-between">
           <div className="flex items-center gap-8">

@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_ROUTES = ["/editor", "/admin"];
 const PUBLIC_ROUTES = ["/", "/auth/callback", "/api/auth/signin"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (PUBLIC_ROUTES.includes(pathname)) {

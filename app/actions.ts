@@ -295,3 +295,61 @@ export async function logOut() {
   await supabase.auth.signOut();
   redirect("/");
 }
+
+export async function syncGithubRepos(): Promise<
+  import("@/lib/types").Repository[]
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("No autenticado");
+
+  const meta = user.user_metadata as {
+    user_name?: string;
+    preferred_username?: string;
+  };
+  const githubUsername = meta?.user_name || meta?.preferred_username || "";
+  if (!githubUsername) return [];
+
+  const { githubClient, GET_USER_PROFILE_QUERY } = await import("@/lib/github");
+
+  const data = await githubClient.request<{
+    user: {
+      repositories: {
+        nodes: Array<{
+          name: string;
+          description: string | null;
+          url: string;
+          stargazerCount: number;
+          primaryLanguage: { name: string; color: string } | null;
+        }>;
+      };
+    } | null;
+  }>(GET_USER_PROFILE_QUERY, { username: githubUsername });
+
+  const repos: import("@/lib/types").Repository[] = (
+    data.user?.repositories?.nodes || []
+  ).map((node) => ({
+    name: node.name,
+    url: node.url,
+    lang: node.primaryLanguage?.name ?? undefined,
+    langColor: node.primaryLanguage?.color ?? undefined,
+    description: node.description || "",
+    stargazerCount: node.stargazerCount,
+    stars: node.stargazerCount,
+    desc: node.description || "",
+  }));
+
+  await supabase.from("portfolios").upsert(
+    {
+      user_id: user.id,
+      github_username: githubUsername,
+      selected_repos: repos,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id", ignoreDuplicates: false },
+  );
+
+  return repos;
+}

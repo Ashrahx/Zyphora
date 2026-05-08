@@ -10,6 +10,7 @@ import {
   updatePortfolioFromCV,
   extractCVDataWithGemini,
   logOut,
+  syncGithubRepos,
 } from "@/app/actions";
 import {
   Repository,
@@ -160,8 +161,15 @@ export default function PreviewPage() {
 
       if (actualUsername) setUsername(actualUsername);
 
+      const displayName =
+        data?.display_name ||
+        userMeta?.name ||
+        userMeta?.user_name ||
+        userMeta?.preferred_username ||
+        "";
+
       if (data) {
-        setRepos((data.selected_repos || []) as Repository[]);
+        const existingRepos = (data.selected_repos || []) as Repository[];
         setCvData({
           work: (data.work_experience || []) as WorkExperience[],
           education: (data.education || []) as Education[],
@@ -182,7 +190,7 @@ export default function PreviewPage() {
         }
 
         setProfile({
-          name: data.display_name || userMeta?.name || "",
+          name: displayName,
           headline: data.headline || "",
           bio: data.bio || "",
           email: data.email || userMeta?.email || "",
@@ -190,16 +198,38 @@ export default function PreviewPage() {
             data.link || (actualUsername ? `github.com/${actualUsername}` : ""),
           location: data.location || "",
         });
+
+        if (existingRepos.length > 0) {
+          setRepos(existingRepos);
+        } else if (actualUsername) {
+          try {
+            const fetched = await syncGithubRepos();
+            setRepos(fetched);
+          } catch {
+            // Sin repos disponibles
+          }
+        }
       } else {
         // Usuario nuevo: pre-rellenar con datos de GitHub
+        const defaultBio =
+          "Desarrollador apasionado por construir soluciones de software que resuelven problemas reales.";
         setProfile({
-          name: userMeta?.name || "",
-          headline: "",
-          bio: "",
+          name: displayName,
+          headline: "Software Developer",
+          bio: defaultBio,
           email: userMeta?.email || "",
           link: actualUsername ? `github.com/${actualUsername}` : "",
           location: "",
         });
+
+        if (actualUsername) {
+          try {
+            const fetched = await syncGithubRepos();
+            setRepos(fetched);
+          } catch {
+            // Sin repos disponibles
+          }
+        }
       }
 
       const savedTemplate = localStorage.getItem("selectedTemplate");

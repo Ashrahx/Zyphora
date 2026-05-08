@@ -268,6 +268,21 @@ export async function extractCVDataWithGemini(
   }
 }
 
+export async function getCurrentUserMeta() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  return user.user_metadata as {
+    name?: string;
+    email?: string;
+    user_name?: string;
+    preferred_username?: string;
+    avatar_url?: string;
+  };
+}
+
 export async function logOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

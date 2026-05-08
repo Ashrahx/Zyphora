@@ -27,6 +27,7 @@ export default function LandingPage() {
     }
   }, [searchParams, router]);
 
+  const [lang, setLang] = useState<"en" | "es">("es");
   const [showDemo, setShowDemo] = useState(false);
   const [demoData, setDemoData] = useState({
     name: "Juan Pérez",
@@ -93,13 +94,12 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4">
             <AnimatedThemeToggler />
-            <Button
-              variant="outline"
-              size="sm"
-              className="font-mono uppercase tracking-widest text-[10px]"
+            <button
+              onClick={() => setLang((l) => (l === "es" ? "en" : "es"))}
+              className="px-3 py-1.5 border border-border bg-background hover:bg-muted text-xs font-bold uppercase text-muted-foreground rounded-md cursor-pointer"
             >
-              Login
-            </Button>
+              {lang === "es" ? "EN" : "ES"}
+            </button>
           </div>
         </div>
       </nav>
@@ -122,9 +122,9 @@ export default function LandingPage() {
         </h1>
 
         <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mb-10 leading-relaxed">
-          Prism conecta directamente con tu GitHub para generar instantáneamente
-          un portafolio de alto rendimiento diseñado para ingenieros. Cero
-          drag-and-drop. Solo datos puros.
+          {lang === "es"
+            ? "Prism conecta directamente con tu GitHub para generar instantáneamente un portafolio de alto rendimiento diseñado para ingenieros. Cero drag-and-drop. Solo datos puros."
+            : "Prism connects directly to your GitHub to instantly generate a high-performance portfolio designed for engineers. Zero drag-and-drop. Just pure data."}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4">
@@ -135,7 +135,8 @@ export default function LandingPage() {
               window.location.href = "/api/auth/signin";
             }}
           >
-            <GitHubIcon fontSize="small" /> Login with GitHub
+            <GitHubIcon fontSize="small" />{" "}
+            {lang === "es" ? "Iniciar con GitHub" : "Login with GitHub"}
           </Button>
 
           <Button
@@ -144,7 +145,8 @@ export default function LandingPage() {
             variant="outline"
             className="border-border hover:bg-card px-8 flex items-center gap-2"
           >
-            View Demo <ArrowForwardIcon fontSize="small" />
+            {lang === "es" ? "Ver Demo" : "View Demo"}{" "}
+            <ArrowForwardIcon fontSize="small" />
           </Button>
         </div>
       </main>
@@ -153,7 +155,9 @@ export default function LandingPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <div className="border-b border-border p-6 flex justify-between items-center">
-              <h3 className="text-2xl font-bold">Prueba tu Portfolio</h3>
+              <h3 className="text-2xl font-bold">
+                {lang === "es" ? "Prueba tu Portfolio" : "Try your Portfolio"}
+              </h3>
               <button
                 onClick={() => setShowDemo(false)}
                 className="text-2xl font-bold text-muted-foreground hover:text-foreground transition-colors"
@@ -166,7 +170,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold mb-2">
-                    Tu Nombre
+                    {lang === "es" ? "Tu Nombre" : "Your Name"}
                   </label>
                   <input
                     type="text"
@@ -181,7 +185,7 @@ export default function LandingPage() {
 
                 <div>
                   <label className="block text-sm font-bold mb-2">
-                    Tu Titular (Headline)
+                    {lang === "es" ? "Tu Titular (Headline)" : "Your Headline"}
                   </label>
                   <input
                     type="text"
@@ -196,7 +200,7 @@ export default function LandingPage() {
 
                 <div>
                   <label className="block text-sm font-bold mb-2">
-                    Plantilla
+                    {lang === "es" ? "Plantilla" : "Template"}
                   </label>
                   <select
                     value={demoData.template}
@@ -205,10 +209,18 @@ export default function LandingPage() {
                     }
                     className="w-full px-4 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:border-primary"
                   >
-                    <option value="minimal">Minimalista</option>
-                    <option value="modern">Moderno</option>
-                    <option value="professional">Profesional</option>
-                    <option value="creative">Creativo</option>
+                    <option value="minimal">
+                      {lang === "es" ? "Minimalista" : "Minimal"}
+                    </option>
+                    <option value="modern">
+                      {lang === "es" ? "Moderno" : "Modern"}
+                    </option>
+                    <option value="professional">
+                      {lang === "es" ? "Profesional" : "Professional"}
+                    </option>
+                    <option value="creative">
+                      {lang === "es" ? "Creativo" : "Creative"}
+                    </option>
                   </select>
                 </div>
 
@@ -217,7 +229,8 @@ export default function LandingPage() {
                   variant="outline"
                   className="w-full flex items-center justify-center gap-2"
                 >
-                  <CasinoIcon fontSize="small" /> Generar Aleatorio
+                  <CasinoIcon fontSize="small" />{" "}
+                  {lang === "es" ? "Generar Aleatorio" : "Randomize"}
                 </Button>
 
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm">
@@ -225,10 +238,22 @@ export default function LandingPage() {
                     <StarIcon fontSize="small" /> Características incluidas:
                   </h4>
                   <ul className="space-y-1 text-muted-foreground">
-                    <li>• Perfil GitHub automático</li>
-                    <li>• Experiencia de tu CV</li>
-                    <li>• 6 repos principales</li>
-                    <li>• Link público</li>
+                    <li>
+                      •{" "}
+                      {lang === "es"
+                        ? "Perfil GitHub automático"
+                        : "Automatic GitHub profile"}
+                    </li>
+                    <li>
+                      •{" "}
+                      {lang === "es"
+                        ? "Experiencia de tu CV"
+                        : "Experience from your CV"}
+                    </li>
+                    <li>
+                      • {lang === "es" ? "6 repos principales" : "6 main repos"}
+                    </li>
+                    <li>• {lang === "es" ? "Link público" : "Public link"}</li>
                   </ul>
                 </div>
               </div>
@@ -237,7 +262,7 @@ export default function LandingPage() {
                 <div className="h-full flex flex-col">
                   <div className="bg-primary/5 border-b border-border p-4">
                     <p className="text-xs font-mono text-muted-foreground">
-                      VISTA PREVIA
+                      {lang === "es" ? "VISTA PREVIA" : "PREVIEW"}
                     </p>
                   </div>
 
@@ -306,11 +331,15 @@ export default function LandingPage() {
                           <div className="flex justify-between">
                             <span className="font-bold">Senior Developer</span>
                             <span className="text-muted-foreground">
-                              2020 - Presente
+                              {lang === "es"
+                                ? "2020 - Presente"
+                                : "2020 - Present"}
                             </span>
                           </div>
                           <p className="text-muted-foreground">
-                            Liderando proyectos críticos
+                            {lang === "es"
+                              ? "Liderando proyectos cr\u00edticos"
+                              : "Leading critical projects"}
                           </p>
                         </div>
                       </>
@@ -352,7 +381,7 @@ export default function LandingPage() {
                   size="lg"
                   className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
                 >
-                  Empezar Ahora
+                  {lang === "es" ? "Empezar Ahora" : "Start Now"}
                 </Button>
               </form>
               <Button
@@ -361,7 +390,7 @@ export default function LandingPage() {
                 size="lg"
                 className="flex-1"
               >
-                Cerrar
+                {lang === "es" ? "Cerrar" : "Close"}
               </Button>
             </div>
           </div>

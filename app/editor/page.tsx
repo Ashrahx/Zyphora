@@ -5,6 +5,7 @@ import { useState, useEffect, useTransition } from "react";
 import { toast } from "sonner";
 import {
   getCurrentUserPortfolio,
+  getCurrentUserMeta,
   updatePortfolioDetails,
   updatePortfolioFromCV,
   extractCVDataWithGemini,
@@ -138,21 +139,28 @@ export default function PreviewPage() {
   });
 
   const [profile, setProfile] = useState<Profile>({
-    name: "Pedro Emiliano García Oñate",
-    headline: "Ingeniero de Software & Desarrollador Backend",
-    bio: "Desarrollador enfocado en automatización industrial, simulaciones físicas y ecosistemas API de alto rendimiento. Especializado en sistemas de control dinámico.",
-    email: "pedro.garcia@dev.io",
-    link: "github.com/Ashrahx",
-    location: "Torreón, MX",
+    name: "",
+    headline: "",
+    bio: "",
+    email: "",
+    link: "",
+    location: "",
   });
 
   useEffect(() => {
     const loadData = async () => {
-      const data = await getCurrentUserPortfolio();
+      const [data, userMeta] = await Promise.all([
+        getCurrentUserPortfolio(),
+        getCurrentUserMeta(),
+      ]);
+
+      const githubUsername =
+        userMeta?.user_name || userMeta?.preferred_username || "";
+      const actualUsername = data?.github_username || githubUsername || "";
+
+      if (actualUsername) setUsername(actualUsername);
 
       if (data) {
-        const actualUsername = data.github_username || "identicons/pedro";
-        setUsername(actualUsername);
         setRepos((data.selected_repos || []) as Repository[]);
         setCvData({
           work: (data.work_experience || []) as WorkExperience[],
@@ -173,14 +181,25 @@ export default function PreviewPage() {
           );
         }
 
-        setProfile((prev) => ({
-          name: data.display_name || prev.name,
-          headline: data.headline || prev.headline,
-          bio: data.bio || prev.bio,
-          email: data.email || prev.email,
-          link: data.link || `github.com/${actualUsername}`,
-          location: data.location || prev.location,
-        }));
+        setProfile({
+          name: data.display_name || userMeta?.name || "",
+          headline: data.headline || "",
+          bio: data.bio || "",
+          email: data.email || userMeta?.email || "",
+          link:
+            data.link || (actualUsername ? `github.com/${actualUsername}` : ""),
+          location: data.location || "",
+        });
+      } else {
+        // Usuario nuevo: pre-rellenar con datos de GitHub
+        setProfile({
+          name: userMeta?.name || "",
+          headline: "",
+          bio: "",
+          email: userMeta?.email || "",
+          link: actualUsername ? `github.com/${actualUsername}` : "",
+          location: "",
+        });
       }
 
       const savedTemplate = localStorage.getItem("selectedTemplate");
